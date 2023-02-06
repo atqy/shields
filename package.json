@@ -21,6 +21,7 @@
     "url": "https://github.com/badges/shields"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.264.0",
     "@fontsource/lato": "^4.5.10",
     "@fontsource/lekton": "^4.5.11",
     "@renovate/pep440": "^1.0.0",
