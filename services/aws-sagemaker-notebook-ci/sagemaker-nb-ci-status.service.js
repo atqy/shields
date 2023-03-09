@@ -69,8 +69,6 @@ export default class SageMakerNotebookCiStatus extends BaseJsonService {
   }
 
   async fetch({ region, notebook }) {
-    console.log('fetching ', `${notebook}-${region}`)
-
     const tableName = await this.getLatestCIResultDynamoDBTable()
 
     const params = {
@@ -85,12 +83,10 @@ export default class SageMakerNotebookCiStatus extends BaseJsonService {
 
   async handle({ region, notebook }) {
     notebook = notebook.replaceAll('|', '/')
-    console.log(region, notebook)
     const info = await this.fetch({
       region,
       notebook,
     })
-    console.log('info', info)
     return this.constructor.render({
       region,
       info,

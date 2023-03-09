@@ -8,6 +8,7 @@ import { bootstrap } from 'global-agent'
 import cloudflareMiddleware from 'cloudflare-middleware'
 import Camp from '@shields_io/camp'
 import originalJoi from 'joi'
+import { Firehose } from '@aws-sdk/client-firehose'
 import makeBadge from '../../badge-maker/lib/make-badge.js'
 import GithubConstellation from '../../services/github/github-constellation.js'
 import LibrariesIoConstellation from '../../services/librariesio/librariesio-constellation.js'
@@ -20,7 +21,9 @@ import { fileSize, nonNegativeInteger } from '../../services/validators.js'
 import log from './log.js'
 import PrometheusMetrics from './prometheus-metrics.js'
 import InfluxMetrics from './influx-metrics.js'
+
 const { URL } = url
+const firehose = new Firehose({ region: 'us-west-2' })
 
 const Joi = originalJoi
   .extend(base => ({
@@ -527,6 +530,53 @@ class Server {
     // https://github.com/badges/shields/issues/3273
     camp.handle((req, res, next) => {
       res.setHeader('Access-Control-Allow-Origin', '*')
+
+      // Save request data to firehose if request not from load blaances
+      if (!req.rawHeaders.includes('ELB-HealthChecker/2.0')) {
+        firehose.listDeliveryStreams({}, function (err, data) {
+          if (err) {
+            console.log(err, err.stack)
+          } else {
+            for (let idx = 0; idx < data.DeliveryStreamNames.length; idx++) {
+              if (data.DeliveryStreamNames[idx].includes('BadgingFirehose')) {
+                const record = {
+                  time: new Date().getTime(),
+                  url: req.url,
+                }
+
+                for (let jdx = 0; jdx < req.rawHeaders.length; jdx++) {
+                  if (['User-Agent', 'referer'].includes(req.rawHeaders[jdx])) {
+                    if (req.rawHeaders[jdx + 1].includes('sagemaker.aws')) {
+                      record[req.rawHeaders[jdx].toLowerCase()] =
+                        req.rawHeaders[jdx + 1]
+                          .split('.')
+                          .slice(1, req.rawHeaders[jdx + 1].length)
+                          .join('.')
+                    } else {
+                      record[req.rawHeaders[jdx].toLowerCase()] =
+                        req.rawHeaders[jdx + 1]
+                    }
+                  }
+                }
+
+                firehose.putRecord({
+                  DeliveryStreamName: data.DeliveryStreamNames[idx],
+                  Record: {
+                    Data: Buffer.from(JSON.stringify(record)),
+                  },
+                  function(err, data) {
+                    if (err) {
+                      console.log(err, err.stack)
+                    }
+                  },
+                })
+                return
+              }
+            }
+            console.log('firehose not found')
+          }
+        })
+      }
       next()
     })
 
