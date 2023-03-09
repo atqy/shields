@@ -98,12 +98,23 @@ function renderBadge(
     svgAttrs['aria-label'] = accessibleText
   }
 
-  const svg = new XmlElement({
-    name: 'svg',
-    content: [title, body],
-    attrs: svgAttrs,
-  })
-  return svg.render()
+  // Original way to render SVG - replaced by below templating solution to meet AppSec requirements
+  // const svg = new XmlElement({
+  //   name: 'svg',
+  //   content: [title, body],
+  //   attrs: svgAttrs,
+  // })
+  //
+  // return svg.render()
+
+  // SVG templating solution required by AppSec
+  const bodyClipPathRectangle = body.content[1].content[0]
+  const bodyG1 = body.content[2]
+  const bodyG2 = body.content[3]
+
+  const svgTemplate = `<svg xmlns="${svgAttrs.xmlns}" xmlns:xlink="${svgAttrs['xmlns:xlink']}" width="${svgAttrs.width}" height="${svgAttrs.height}" role="${svgAttrs.role}" aria-label="${svgAttrs['aria-label']}"><title>${title.content[0]}</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="r"><rect width="${bodyClipPathRectangle.attrs.width}" height="${bodyClipPathRectangle.attrs.height}" rx="${bodyClipPathRectangle.attrs.rx}" fill="${bodyClipPathRectangle.attrs.fill}"/></clipPath><g clip-path="url(#r)"><rect width="${bodyG1.content[0].attrs.width}" height="${bodyG1.content[0].attrs.height}" fill="${bodyG1.content[0].attrs.fill}"/><rect x="${bodyG1.content[1].attrs.x}" width="${bodyG1.content[1].attrs.width}" height="${bodyG1.content[1].attrs.height}" fill="${bodyG1.content[1].attrs.fill}"/><rect width="${bodyG1.content[2].attrs.width}" height="${bodyG1.content[2].attrs.height}" fill="${bodyG1.content[2].attrs.fill}"/></g><g fill="${bodyG2.attrs.fill}" text-anchor="${bodyG2.attrs['text-anchor']}" font-family="${bodyG2.attrs['font-family']}" text-rendering="${bodyG2.attrs['text-rendering']}" font-size="${bodyG2.attrs['font-size']}"><text aria-hidden="${bodyG2.content[1].content[0].attrs['aria-hidden']}" x="${bodyG2.content[1].content[0].attrs.x}" y="${bodyG2.content[1].content[0].attrs.y}" fill="${bodyG2.content[1].content[0].attrs.fill}" fill-opacity="${bodyG2.content[1].content[0].attrs['fill-opacity']}" transform="${bodyG2.content[1].content[0].attrs.transform}" textLength="${bodyG2.content[1].content[0].attrs.textLength}">${bodyG2.content[1].content[0].content[0]}</text><text x="${bodyG2.content[1].content[1].attrs.x}" y="${bodyG2.content[1].content[1].attrs.y}" transform="${bodyG2.content[1].content[1].attrs.transform}" fill="${bodyG2.content[1].content[1].attrs.fill}" textLength="${bodyG2.content[1].content[1].attrs.textLength}">${bodyG2.content[1].content[1].content[0]}</text><text aria-hidden="${bodyG2.content[2].content[0].attrs['aria-hidden']}" x="${bodyG2.content[2].content[0].attrs.x}" y="${bodyG2.content[2].content[0].attrs.y}" fill="${bodyG2.content[2].content[0].attrs.fill}" fill-opacity="${bodyG2.content[2].content[0].attrs['fill-opacity']}" transform="${bodyG2.content[2].content[0].attrs.transform}" textLength="${bodyG2.content[2].content[0].attrs.textLength}">${bodyG2.content[2].content[0].content[0]}</text><text x="${bodyG2.content[2].content[1].attrs.x}" y="${bodyG2.content[2].content[1].attrs.y}" transform="${bodyG2.content[2].content[1].attrs.transform}" fill="${bodyG2.content[2].content[1].attrs.fill}" textLength="${bodyG2.content[2].content[1].attrs.textLength}">${bodyG2.content[2].content[1].content[0]}</text></g></svg>`
+
+  return svgTemplate
 }
 
 class Badge {
