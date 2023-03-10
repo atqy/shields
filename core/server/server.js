@@ -8,7 +8,8 @@ import { bootstrap } from 'global-agent'
 import cloudflareMiddleware from 'cloudflare-middleware'
 import Camp from '@shields_io/camp'
 import originalJoi from 'joi'
-import { Firehose } from '@aws-sdk/client-firehose'
+// import { Firehose } from '@aws-sdk/client-firehose'
+import { Kinesis } from '@aws-sdk/client-kinesis'
 import makeBadge from '../../badge-maker/lib/make-badge.js'
 import GithubConstellation from '../../services/github/github-constellation.js'
 import LibrariesIoConstellation from '../../services/librariesio/librariesio-constellation.js'
@@ -23,7 +24,8 @@ import PrometheusMetrics from './prometheus-metrics.js'
 import InfluxMetrics from './influx-metrics.js'
 
 const { URL } = url
-const firehose = new Firehose({ region: 'us-west-2' })
+// const firehose = new Firehose({ region: 'us-west-2' })
+const kinesis = new Kinesis({ region: 'us-west-2' })
 
 const Joi = originalJoi
   .extend(base => ({
@@ -533,12 +535,56 @@ class Server {
 
       // Save request data to firehose if request not from load blaances
       if (!req.rawHeaders.includes('ELB-HealthChecker/2.0')) {
-        firehose.listDeliveryStreams({}, function (err, data) {
+        // firehose.listDeliveryStreams({}, function (err, data) {
+        //   if (err) {
+        //     console.log(err, err.stack)
+        //   } else {
+        //     for (let idx = 0; idx < data.DeliveryStreamNames.length; idx++) {
+        //       if (data.DeliveryStreamNames[idx].includes('BadgingFirehose')) {
+        //         const record = {
+        //           time: new Date().getTime(),
+        //           url: req.url,
+        //         }
+
+        //         for (let jdx = 0; jdx < req.rawHeaders.length; jdx++) {
+        //           if (['User-Agent', 'referer'].includes(req.rawHeaders[jdx])) {
+        //             if (req.rawHeaders[jdx + 1].includes('sagemaker.aws')) {
+        //               record[req.rawHeaders[jdx].toLowerCase()] =
+        //                 req.rawHeaders[jdx + 1]
+        //                   .split('.')
+        //                   .slice(1, req.rawHeaders[jdx + 1].length)
+        //                   .join('.')
+        //             } else {
+        //               record[req.rawHeaders[jdx].toLowerCase()] =
+        //                 req.rawHeaders[jdx + 1]
+        //             }
+        //           }
+        //         }
+
+        //         firehose.putRecord({
+        //           DeliveryStreamName: data.DeliveryStreamNames[idx],
+        //           Record: {
+        //             Data: Buffer.from(JSON.stringify(record)),
+        //           },
+        //           function(err, data) {
+        //             if (err) {
+        //               console.log(err, err.stack)
+        //             }
+        //           },
+        //         })
+        //         return
+        //       }
+        //     }
+        //     console.log('firehose not found')
+        //   }
+        // })
+
+        kinesis.listStreams({}, function (err, data) {
           if (err) {
             console.log(err, err.stack)
           } else {
-            for (let idx = 0; idx < data.DeliveryStreamNames.length; idx++) {
-              if (data.DeliveryStreamNames[idx].includes('BadgingFirehose')) {
+            for (let idx = 0; idx < data.StreamNames.length; idx++) {
+              if (data.StreamNames[idx].includes('BadgingFirehose')) {
                 const record = {
                   time: new Date().getTime(),
                   url: req.url,
@@ -559,11 +605,10 @@ class Server {
                   }
                 }
 
-                firehose.putRecord({
-                  DeliveryStreamName: data.DeliveryStreamNames[idx],
-                  Record: {
-                    Data: Buffer.from(JSON.stringify(record)),
-                  },
+                kinesis.putRecord({
+                  StreamName: data.StreamNames[idx],
+                  PartitionKey: 'SagemakerNotebookAnalytics',
+                  Data: Buffer.from(JSON.stringify(record)),
                   function(err, data) {
                     if (err) {
                       console.log(err, err.stack)

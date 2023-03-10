@@ -23,6 +23,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.264.0",
     "@aws-sdk/client-firehose": "^3.264.0",
+    "@aws-sdk/client-kinesis": "^3.264.0",
     "@fontsource/lato": "^4.5.10",
     "@fontsource/lekton": "^4.5.11",
     "@renovate/pep440": "^1.0.0",
